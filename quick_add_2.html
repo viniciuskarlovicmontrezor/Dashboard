@@ -183,7 +183,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, serverTimestamp, query, where, orderBy, onSnapshot
@@ -213,11 +213,13 @@ const deniedMsg = document.getElementById('denied-msg');
 document.getElementById('google-signin').addEventListener('click', async () => {
   deniedMsg.style.display = 'none';
   try {
-    await signInWithPopup(auth, provider);
+    await signInWithRedirect(auth, provider);
   } catch (e) {
-    console.error(e);
+    console.error('redirect sign-in failed', e);
   }
 });
+
+getRedirectResult(auth).catch(e => console.error('redirect result error', e));
 
 document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));
 
