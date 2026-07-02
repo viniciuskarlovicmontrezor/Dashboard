@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Finanziario — 24/06/2026</title>
+<title>Dashboard Finanziario — Live</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -14,7 +14,11 @@
     min-height: 100vh;
   }
   h1 { font-size: 1.4rem; color: #a78bfa; margin-bottom: 2px; }
-  .subtitle { font-size: 0.75rem; color: #64748b; margin-bottom: 20px; }
+  .subtitle { font-size: 0.75rem; color: #64748b; margin-bottom: 20px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .sync-badge { font-size: 0.65rem; padding:3px 9px; border-radius:20px; border:1px solid #2d3148; color:#64748b; display:inline-flex; align-items:center; gap:5px; }
+  .sync-badge .dot { width:6px; height:6px; border-radius:50%; background:#34d399; }
+  .sync-badge.loading .dot { background:#fbbf24; animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
   /* TABS */
   .tabs { display: flex; gap: 8px; margin-bottom: 22px; max-width: 900px; margin-left: auto; margin-right: auto; }
@@ -119,6 +123,7 @@
   .bar-track { height: 4px; background: #2d3148; border-radius: 2px; margin-top: 4px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 2px; }
   .sep { font-size: 0.62rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 4px; margin: 4px 0 2px; }
+  .empty-note { text-align:center; font-size:0.72rem; color:#475569; padding:14px 4px; }
 
   /* Waterfall */
   .wf-wrap { background: #1a1d2e; border-radius: 13px; padding: 16px 20px; border: 1px solid #2d3148; margin-bottom: 14px; }
@@ -134,6 +139,7 @@
     display: flex; align-items: center; gap: 14px;
     border: 1px solid #f8717155; background: rgba(248,113,113,0.06);
   }
+  .deficit-box.positive { border-color:#34d39955; background:rgba(52,211,153,0.06); }
   .deficit-icon { font-size: 1.8rem; }
   .deficit-text { flex: 1; }
   .deficit-lbl { font-size: 0.68rem; color: #94a3b8; margin-bottom: 3px; }
@@ -151,7 +157,10 @@
 <body>
 
 <h1>💼 Dashboard Finanziario Personale</h1>
-<p class="subtitle">Aggiornato al 01 luglio 2026 · Cambio: 1 EUR = 5,92 BRL · 1 EUR = 1,1371 USD</p>
+<p class="subtitle">
+  Aggiornato al 01 luglio 2026 · Cambio: 1 EUR = 5,92 BRL · 1 EUR = 1,1371 USD
+  <span class="sync-badge loading" id="sync-badge"><span class="dot"></span><span id="sync-text">Connessione al cloud...</span></span>
+</p>
 
 <div class="tabs" style="margin-bottom:22px;">
   <div class="tab active" onclick="switchTab('patrimonio', this)">🏆 Patrimonio Netto</div>
@@ -196,23 +205,23 @@
   <div class="cards">
     <div class="card">
       <div class="card-label">✅ Entrate</div>
-      <div class="card-val green">+€ 1.003</div>
+      <div class="card-val green" id="card-inc-val">+€ 0</div>
       <div class="card-sub">4 affitti SP</div>
     </div>
     <div class="card">
       <div class="card-label">🔴 Uscite Fisse</div>
-      <div class="card-val red">−€ 1.765</div>
+      <div class="card-val red" id="card-fix-val">−€ 0</div>
       <div class="card-sub">Affitto + utenze + sport</div>
     </div>
     <div class="card">
       <div class="card-label">🛒 Spese Variabili</div>
-      <div class="card-val orange">−€ 0,00</div>
-      <div class="card-sub">Luglio 2026 · 0 voci</div>
+      <div class="card-val orange" id="card-var-val">−€ 0,00</div>
+      <div class="card-sub" id="card-var-sub">Luglio 2026 · 0 voci</div>
     </div>
     <div class="card">
       <div class="card-label">⚖️ Saldo Netto</div>
-      <div class="card-val red">−€ 739</div>
-      <div class="card-sub">Deficit mensile</div>
+      <div class="card-val red" id="card-saldo-val">−€ 0</div>
+      <div class="card-sub" id="card-saldo-sub">Deficit mensile</div>
     </div>
   </div>
 
@@ -221,7 +230,7 @@
     <div class="section-card">
       <div class="section-title">
         <span class="green">✅ ENTRATE</span>
-        <span class="section-total green">+€ 1.009,60</span>
+        <span class="section-total green" id="income-total">+€ 0</span>
       </div>
       <div class="flow-row-item" id="income-rows"></div>
     </div>
@@ -229,7 +238,7 @@
     <div class="section-card">
       <div class="section-title">
         <span class="red">🔴 COSTI FISSI</span>
-        <span class="section-total red">−€ 1.764,64</span>
+        <span class="section-total red" id="fixed-total">−€ 0</span>
       </div>
       <div class="flow-row-item" id="expense-rows"></div>
     </div>
@@ -237,7 +246,7 @@
     <div class="section-card" style="border-color:#fb923c44;">
       <div class="section-title">
         <span class="orange">🛒 SPESE VARIABILI</span>
-        <span class="section-total orange">−€ 0,00</span>
+        <span class="section-total orange" id="var-total">−€ 0,00</span>
       </div>
       <div class="flow-row-item" id="var-rows"></div>
     </div>
@@ -250,15 +259,15 @@
   </div>
 
   <!-- Deficit -->
-  <div class="deficit-box">
-    <div class="deficit-icon">⚠️</div>
+  <div class="deficit-box" id="deficit-box">
+    <div class="deficit-icon" id="deficit-icon">⚠️</div>
     <div class="deficit-text">
-      <div class="deficit-lbl">DEFICIT MENSILE CORRENTE</div>
-      <div class="deficit-val">−€ 739,95</div>
-      <div class="deficit-note">Luglio 2026 iniziato · Spese variabili: €0 · Liquidità: € 5.388 · ❄️ Rata condiz. fino a ott 2026</div>
+      <div class="deficit-lbl" id="deficit-lbl">DEFICIT MENSILE CORRENTE</div>
+      <div class="deficit-val" id="deficit-val">−€ 0</div>
+      <div class="deficit-note" id="deficit-note">Luglio 2026 · Liquidità: € 5.383</div>
     </div>
     <div class="deficit-months">
-      <div class="deficit-months-val">~7 mesi</div>
+      <div class="deficit-months-val" id="deficit-months-val">~0 mesi</div>
       <div class="deficit-months-lbl">autonomia con<br>liquidità attuale</div>
     </div>
   </div>
@@ -268,6 +277,7 @@
 
 <script>
 const fmt = v => '€ ' + Math.abs(v).toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmt0 = v => '€ ' + Math.abs(v).toLocaleString('it-IT', {minimumFractionDigits:0, maximumFractionDigits:0});
 const fmtBRL = v => 'R$ ' + Math.abs(v).toLocaleString('it-IT', {minimumFractionDigits:0});
 
 /* ===== TABS ===== */
@@ -319,6 +329,7 @@ const categories = [
 ];
 
 const totalPat = categories.reduce((s,c) => s+c.value, 0);
+const liquidita = categories.find(c => c.label.includes('Liquidità')).value;
 let activeIdx = null;
 
 /* Donut */
@@ -351,7 +362,6 @@ function drawDonut(hl=null) {
     angle += sweep+gap;
   });
 
-  // Draw labels outside slices with lines
   angle = -Math.PI/2;
   categories.forEach((d,i) => {
     const sweep = (d.value/totalPat)*2*Math.PI - gap;
@@ -361,7 +371,6 @@ function drawDonut(hl=null) {
     const names = ['Immobili','Precatório','Investim.','Liquidità'];
     const name = names[i];
 
-    // Line start (edge of slice)
     const lineStart = R + 6;
     const lineEnd = R + 22;
     const labelDist = R + 30;
@@ -377,7 +386,6 @@ function drawDonut(hl=null) {
     const textAlign = isRight ? 'left' : 'right';
     const xOffset = isRight ? 4 : -4;
 
-    // Draw line
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -385,13 +393,11 @@ function drawDonut(hl=null) {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Dot at end of line
     ctx.beginPath();
     ctx.arc(x2, y2, 2, 0, 2*Math.PI);
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.fill();
 
-    // Background pill for text
     ctx.save();
     ctx.textAlign = textAlign;
     ctx.font = 'bold 10px Segoe UI';
@@ -404,12 +410,10 @@ function drawDonut(hl=null) {
     ctx.roundRect(px, ly - 16, maxW + 8, 28, 4);
     ctx.fill();
 
-    // Name text
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 10px Segoe UI';
     ctx.fillText(name, lx + xOffset, ly - 4);
 
-    // Pct text
     ctx.fillStyle = '#a78bfa';
     ctx.font = 'bold 10px Segoe UI';
     ctx.fillText(pct+'%', lx + xOffset, ly + 8);
@@ -508,7 +512,7 @@ function closeDetail(){
   document.getElementById('center-sub').textContent='patrimonio totale';
 }
 
-/* ===== FLUSSO DATA ===== */
+/* ===== FLUSSO DATA (statico: affitti + costi fissi) ===== */
 const incomes = [
   {icon:'🏠',name:'Rua Dr. Nicolau Defina, 167',sub:'Jardim da Saúde · SP',eur:177.40,brl:1050},
   {icon:'🏠',name:'Av. Leonardo da Vinci, 670',sub:'Vila Guarani · SP',eur:349.66,brl:2070},
@@ -525,45 +529,15 @@ const fixedExp = [
   {icon:'🏝️',name:'Casa Florianópolis',sub:'IPTU + Rampa + CELESC',eur:25.84,cat:'Casa BR'},
   {icon:'❄️',name:'Condizionatore portatile (rata)',sub:'5 rate · giu–ott 2026 · €359,99 totale',eur:72,cat:'Casa'},
 ];
-// ── RIEPILOGO GIUGNO 2026 (chiuso) ──
-const giugnoExp = [
-  {icon:'☕',name:'Caffè',sub:'24/06 · Isybank',eur:3,cat:'Svago'},
-  {icon:'🍽️',name:'Cena',sub:'24/06 · Isybank',eur:12,cat:'Ristoranti'},
-  {icon:'🧸',name:'Funko Ging Freecss',sub:'24/06 · Isybank',eur:12.30,cat:'Svago'},
-  {icon:'🛒',name:'Spesa',sub:'25/06 · Isybank',eur:33.25,cat:'Alimentari'},
-  {icon:'😷',name:'Mascherine',sub:'26/06 · Isybank',eur:2.25,cat:'Salute'},
-  {icon:'💊',name:'Medicina pollice',sub:'26/06 · Isybank',eur:23.65,cat:'Salute'},
-  {icon:'🦴',name:'Tutore pollice',sub:'26/06 · Isybank',eur:36,cat:'Salute'},
-  {icon:'🍽️',name:'Pranzo collaborazione',sub:'26/06 · Isybank',eur:10.40,cat:'Ristoranti'},
-  {icon:'🍦',name:'Gelati',sub:'26/06 · Isybank',eur:8,cat:'Svago'},
-  {icon:'🍽️',name:'Pranzo',sub:'27/06 · Isybank',eur:6.20,cat:'Ristoranti'},
-  {icon:'☕',name:'Caffè',sub:'27/06 · Isybank',eur:1.50,cat:'Svago'},
-  {icon:'🛍️',name:'Amazon Prime extra',sub:'27/06 · Isybank',eur:4.99,cat:'Software'},
-  {icon:'🚌',name:'Trasporto',sub:'28/06 · Isybank',eur:2.20,cat:'Trasporti'},
-  {icon:'🎉',name:'Serata',sub:'28/06 · Isybank',eur:15.50,cat:'Svago'},
-  {icon:'📦',name:'Amazon Ad Free',sub:'28/06 · Isybank',eur:2,cat:'Software'},
-  {icon:'🛵',name:'Cena Glovo',sub:'28/06 · Isybank',eur:18.99,cat:'Ristoranti'},
-  {icon:'🛵',name:'Cena Glovo',sub:'28/06 · Isybank',eur:20,cat:'Ristoranti'},
-  {icon:'☕',name:'Caffè',sub:'29/06 · Isybank',eur:1.50,cat:'Svago'},
-  {icon:'⚡',name:'Bevanda energetica',sub:'29/06 · Isybank',eur:2.20,cat:'Svago'},
-  {icon:'🚌',name:'Trasporto',sub:'29/06 · Isybank',eur:2.20,cat:'Trasporti'},
-  {icon:'🍽️',name:'Cena',sub:'29/06 · Isybank',eur:15,cat:'Ristoranti'},
-  {icon:'☕',name:'Caffè',sub:'29/06 · Isybank',eur:1.10,cat:'Svago'},
-  {icon:'🍽️',name:'Pranzo',sub:'29/06 · Isybank',eur:7.90,cat:'Ristoranti'},
-  {icon:'🧴',name:'Deodorante',sub:'29/06 · Isybank',eur:3.98,cat:'Salute'},
-  {icon:'🥤',name:'Proteine',sub:'29/06 · Isybank',eur:6.94,cat:'Alimentari'},
-  {icon:'🛒',name:'Spesa',sub:'30/06 · Isybank',eur:12.94,cat:'Alimentari'},
-  {icon:'🍽️',name:'Pranzo e cena',sub:'30/06 · Isybank',eur:12.40,cat:'Ristoranti'},
-];
-// ── LUGLIO 2026 (in corso) ──
-const varExp = [];
+
+// Spese variabili: caricate live da Firestore (quick add). Vuoto finché non arrivano i dati.
+let varExp = [];
+let varExpLoaded = false;
 
 const totalInc = incomes.reduce((s,i)=>s+i.eur,0);
 const totalFix = fixedExp.reduce((s,i)=>s+i.eur,0);
-const totalVar = varExp.reduce((s,i)=>s+i.eur,0);
-const totalExp2 = totalFix+totalVar;
 
-/* Income rows */
+/* Income rows (statiche) */
 const incRowEl = document.getElementById('income-rows');
 const maxInc = Math.max(...incomes.map(i=>i.eur));
 incomes.forEach(item=>{
@@ -573,80 +547,180 @@ incomes.forEach(item=>{
   el.className='flow-item';
   el.innerHTML=`<div class="fi-icon">${item.icon}</div>
     <div style="flex:1"><div class="fi-name">${item.name}<div class="fi-sub">${item.sub}</div></div>
-    <div class="bar-track"><div class="bar-fill" style="width:0%;background:#34d399" data-w="${bW}%"></div></div></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${bW}%;background:#34d399"></div></div></div>
     <div class="fi-right"><div class="fi-val green">+${fmt(item.eur)}</div>
     <div class="fi-pct">${pct}% entrate</div></div>`;
   incRowEl.appendChild(el);
 });
 
-/* Expense rows */
+/* Expense rows (fisse, statiche) */
 const expRowEl = document.getElementById('expense-rows');
-const varRowEl = document.getElementById('var-rows');
 const maxFixed = Math.max(...fixedExp.map(i=>i.eur));
-const maxVar = Math.max(...varExp.map(i=>i.eur));
-
 fixedExp.forEach(item=>{
   const pct=((item.eur/totalFix)*100).toFixed(1);
   const bW=((item.eur/maxFixed)*100).toFixed(1);
   const el=document.createElement('div'); el.className='flow-item';
   el.innerHTML=`<div class="fi-icon">${item.icon}</div>
     <div style="flex:1"><div class="fi-name">${item.name}<div class="fi-sub">${item.sub}</div></div>
-    <div class="bar-track"><div class="bar-fill" style="width:0%;background:#f87171" data-w="${bW}%"></div></div></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${bW}%;background:#f87171"></div></div></div>
     <div class="fi-right"><div class="fi-val red">−${fmt(item.eur)}</div>
     <div class="fi-pct">${pct}% fissi</div></div>`;
   expRowEl.appendChild(el);
 });
 
-varExp.forEach(item=>{
-  const pct=((item.eur/totalVar)*100).toFixed(1);
-  const bW=((item.eur/maxVar)*100).toFixed(1);
-  const el=document.createElement('div'); el.className='flow-item';
-  el.innerHTML=`<div class="fi-icon">${item.icon}</div>
-    <div style="flex:1"><div class="fi-name">${item.name}<div class="fi-sub">${item.sub}</div></div>
-    <div class="bar-track"><div class="bar-fill" style="width:0%;background:#fb923c" data-w="${bW}%"></div></div></div>
-    <div class="fi-right"><div class="fi-val orange">−${fmt(item.eur)}</div>
-    <div class="fi-pct">${pct}% var.</div></div>`;
-  varRowEl.appendChild(el);
-});
+document.getElementById('income-total').textContent = '+' + fmt(totalInc);
+document.getElementById('fixed-total').textContent = '−' + fmt(totalFix);
+document.getElementById('card-inc-val').textContent = '+' + fmt0(totalInc);
+document.getElementById('card-fix-val').textContent = '−' + fmt0(totalFix);
 
-/* Waterfall */
-const wfData = [
-  {label:'✅ Entrate affitti', val:totalInc, color:'#34d399'},
-  {label:'🏠 Affitto Via Ebro', val:-1300, color:'#f87171'},
-  {label:'💪 Virgin Active', val:-160, color:'#f87171'},
-  {label:'⚡ A2A Luce', val:-90, color:'#f87171'},
-  {label:'📱 TIM Fibra + Tel.', val:-38.80, color:'#f87171'},
-  {label:'💻 Abbonamenti SW', val:-53, color:'#f87171'},
-  {label:'🔥 A2A Gas', val:-25, color:'#f87171'},
-  {label:'🏝️ Casa Florianópolis', val:-25.84, color:'#f87171'},
-  {label:'❄️ Condizionatore (rata)', val:-72, color:'#f87171'},
-  {label:'🛒 Spese variabili luglio', val:0, color:'#fb923c'},
-  {label:'⚖️ Saldo Finale', val:totalInc-totalExp2, color:'#f87171'},
-];
-const maxWF = totalInc;
-const wfEl = document.getElementById('waterfall');
-wfData.forEach(d=>{
-  const w=Math.abs((d.val/maxWF)*100).toFixed(1);
-  const sign=d.val>0?'+':'−';
-  const row=document.createElement('div'); row.className='wf-row';
-  row.innerHTML=`<div class="wf-label">${d.label}</div>
-    <div class="wf-track"><div class="wf-bar" style="width:0%;background:${d.color}" data-w="${w}%">${w>10?sign+fmt(d.val):''}</div></div>
-    <div class="wf-val" style="color:${d.color}">${sign+fmt(d.val)}</div>`;
-  wfEl.appendChild(row);
-});
+/* ===== Render dinamico della parte variabile (Firestore) ===== */
+const meseNomi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const oggi = new Date();
+const meseLabel = meseNomi[oggi.getMonth()] + ' ' + oggi.getFullYear();
 
-/* Animate */
-setTimeout(()=>{
-  document.querySelectorAll('.bar-fill, .wf-bar').forEach(b=>{
-    if(b.dataset.w) b.style.width=b.dataset.w;
+function renderFlusso() {
+  const totalVar = varExp.reduce((s,i)=>s+i.eur,0);
+  const totalExp2 = totalFix + totalVar;
+  const saldo = totalInc - totalExp2;
+
+  // Card spese variabili
+  document.getElementById('card-var-val').textContent = (totalVar>0?'−':'') + fmt(totalVar);
+  document.getElementById('card-var-sub').textContent = `${meseLabel.charAt(0).toUpperCase()+meseLabel.slice(1)} · ${varExp.length} vo${varExp.length===1?'ce':'ci'}`;
+  document.getElementById('var-total').textContent = '−' + fmt(totalVar);
+
+  // Card saldo netto
+  document.getElementById('card-saldo-val').textContent = (saldo<0?'−':'+') + fmt0(Math.abs(saldo));
+  document.getElementById('card-saldo-sub').textContent = saldo<0 ? 'Deficit mensile' : 'Surplus mensile';
+
+  // Righe spese variabili
+  const varRowEl = document.getElementById('var-rows');
+  varRowEl.innerHTML = '';
+  if (varExp.length === 0) {
+    varRowEl.innerHTML = varExpLoaded
+      ? '<div class="empty-note">Nessuna spesa variabile registrata questo mese</div>'
+      : '<div class="empty-note">Caricamento dal cloud...</div>';
+  } else {
+    const maxVar = Math.max(...varExp.map(i=>i.eur));
+    varExp.forEach(item=>{
+      const pct=((item.eur/totalVar)*100).toFixed(1);
+      const bW=((item.eur/maxVar)*100).toFixed(1);
+      const el=document.createElement('div'); el.className='flow-item';
+      el.innerHTML=`<div class="fi-icon">${item.icon}</div>
+        <div style="flex:1"><div class="fi-name">${item.name}<div class="fi-sub">${item.sub}</div></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${bW}%;background:#fb923c"></div></div></div>
+        <div class="fi-right"><div class="fi-val orange">−${fmt(item.eur)}</div>
+        <div class="fi-pct">${pct}% var.</div></div>`;
+      varRowEl.appendChild(el);
+    });
+  }
+
+  // Waterfall
+  const wfData = [
+    {label:'✅ Entrate affitti', val:totalInc, color:'#34d399'},
+    ...fixedExp.map(f => ({label:`${f.icon} ${f.name.split(',')[0]}`, val:-f.eur, color:'#f87171'})),
+    {label:'🛒 Spese variabili', val:-totalVar, color:'#fb923c'},
+    {label:'⚖️ Saldo Finale', val:saldo, color: saldo<0 ? '#f87171' : '#34d399'},
+  ];
+  const maxWF = totalInc || 1;
+  const wfEl = document.getElementById('waterfall');
+  wfEl.innerHTML = '';
+  wfData.forEach(d=>{
+    const w=Math.abs((d.val/maxWF)*100).toFixed(1);
+    const sign=d.val>0?'+':'−';
+    const row=document.createElement('div'); row.className='wf-row';
+    row.innerHTML=`<div class="wf-label">${d.label}</div>
+      <div class="wf-track"><div class="wf-bar" style="width:${w}%;background:${d.color}">${w>10?sign+fmt(d.val):''}</div></div>
+      <div class="wf-val" style="color:${d.color}">${sign+fmt(d.val)}</div>`;
+    wfEl.appendChild(row);
   });
-},150);
+
+  // Deficit / surplus box
+  const box = document.getElementById('deficit-box');
+  box.className = 'deficit-box' + (saldo>=0 ? ' positive' : '');
+  document.getElementById('deficit-icon').textContent = saldo<0 ? '⚠️' : '🎉';
+  document.getElementById('deficit-lbl').textContent = saldo<0 ? 'DEFICIT MENSILE CORRENTE' : 'SURPLUS MENSILE CORRENTE';
+  document.getElementById('deficit-val').textContent = (saldo<0?'−':'+') + fmt(Math.abs(saldo));
+  document.getElementById('deficit-val').style.color = saldo<0 ? '#f87171' : '#34d399';
+  document.getElementById('deficit-note').textContent = `${meseLabel.charAt(0).toUpperCase()+meseLabel.slice(1)} · Spese variabili: ${fmt(totalVar)} · Liquidità: € ${liquidita.toLocaleString('it-IT')}`;
+
+  const months = saldo < 0 ? (liquidita / Math.abs(saldo)) : Infinity;
+  document.getElementById('deficit-months-val').textContent = saldo<0 ? `~${months.toFixed(0)} mesi` : '∞';
+
+  // Bar animation
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.bar-fill').forEach(b=>{ b.style.transition='width 0.6s ease'; });
+  });
+}
+renderFlusso();
 
 /* Tooltip */
 const tip=document.getElementById('tooltip');
-document.querySelectorAll('.flow-item').forEach(el=>{
-  el.addEventListener('mousemove',e=>{ tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px'; });
-  el.addEventListener('mouseleave',()=>tip.style.display='none');
+document.addEventListener('mousemove', e => {
+  const el = e.target.closest('.flow-item');
+  if (el) { tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px'; }
+});
+
+// Esposte per lo script Firebase (module) più sotto
+window.__applyVarExpenses = function(list) {
+  varExp = list;
+  varExpLoaded = true;
+  renderFlusso();
+};
+window.__setSyncStatus = function(text, ok) {
+  const badge = document.getElementById('sync-badge');
+  document.getElementById('sync-text').textContent = text;
+  badge.classList.toggle('loading', !ok);
+};
+</script>
+
+<!-- ===== Connessione Firestore: legge le spese variabili registrate dal Quick Add ===== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAIY7CYpILhiZUXLJQb8DRnCaTTVbL91fQ",
+  authDomain: "dashboard-finanziario.firebaseapp.com",
+  projectId: "dashboard-finanziario",
+  storageBucket: "dashboard-finanziario.firebasestorage.app",
+  messagingSenderId: "82100451387",
+  appId: "1:82100451387:web:de7edaf19cee9fa01d841e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const now = new Date();
+const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+const catIcons = {
+  '🏠 Casa':'🏠', '🛒 Spesa':'🛒', '🍽️ Ristoranti':'🍽️', '🚌 Trasporti':'🚌',
+  '💊 Salute':'💊', '🎉 Svago':'🎉', '💻 Software':'💻', '⚡ Utenze':'⚡',
+  '🧴 Igiene':'🧴', '👗 Abbigliamento':'👗', '❄️ Elettrodomestici':'❄️', '📦 Altro':'📦'
+};
+
+const q = query(
+  collection(db, 'transactions'),
+  where('month', '==', monthKey),
+  where('type', '==', 'expense')
+);
+
+onSnapshot(q, (snap) => {
+  const list = [];
+  snap.forEach(doc => {
+    const d = doc.data();
+    list.push({
+      icon: catIcons[d.category] || '📦',
+      name: d.description,
+      sub: `${d.category.replace(/^\S+\s/,'')} · ${d.account} · ${d.date}`,
+      eur: Number(d.amountEur || d.amount || 0)
+    });
+  });
+  window.__applyVarExpenses(list);
+  window.__setSyncStatus(`Sincronizzato · ${list.length} spese live`, true);
+}, (err) => {
+  console.error('Errore Firestore:', err);
+  window.__setSyncStatus('Errore di connessione al cloud', false);
 });
 </script>
 </body>
