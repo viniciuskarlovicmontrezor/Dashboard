@@ -99,6 +99,7 @@
     Accedi con Google
   </button>
   <p id="denied-msg" class="denied" style="display:none">Questo account non è autorizzato a scrivere su questo dashboard.</p>
+  <p id="auth-error-msg" class="denied" style="display:none"></p>
 </div>
 
 <div class="app-wrap" id="app-wrap">
@@ -209,17 +210,33 @@ const provider = new GoogleAuthProvider();
 const authGate = document.getElementById('auth-gate');
 const appWrap = document.getElementById('app-wrap');
 const deniedMsg = document.getElementById('denied-msg');
+const authErrorMsg = document.getElementById('auth-error-msg');
 
 document.getElementById('google-signin').addEventListener('click', async () => {
   deniedMsg.style.display = 'none';
+  authErrorMsg.style.display = 'none';
   try {
-    await signInWithRedirect(auth, provider);
+    // Popup è più affidabile su mobile: evita il salto di dominio
+    // (github.io -> firebaseapp.com -> google -> firebaseapp.com -> github.io)
+    // che su Safari iOS e alcuni Android perde lo stato di login.
+    await signInWithPopup(auth, provider);
   } catch (e) {
-    console.error('redirect sign-in failed', e);
+    console.warn('popup sign-in fallita, provo con redirect', e);
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (e2) {
+      console.error('redirect sign-in failed', e2);
+      authErrorMsg.textContent = 'Errore di accesso: ' + (e2.code || e2.message || 'sconosciuto');
+      authErrorMsg.style.display = 'block';
+    }
   }
 });
 
-getRedirectResult(auth).catch(e => console.error('redirect result error', e));
+getRedirectResult(auth).catch(e => {
+  console.error('redirect result error', e);
+  authErrorMsg.textContent = 'Errore di accesso: ' + (e.code || e.message || 'sconosciuto');
+  authErrorMsg.style.display = 'block';
+});
 
 document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));
 
