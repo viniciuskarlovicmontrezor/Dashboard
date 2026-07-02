@@ -223,7 +223,7 @@ function dbg(msg) {
   console.log('[auth-debug]', msg);
 }
 
-dbg('Pagina caricata. UA: ' + navigator.userAgent.slice(0, 60));
+dbg('Pagina caricata (v2). UA: ' + navigator.userAgent.slice(0, 60));
 dbg('Storage: cookies=' + navigator.cookieEnabled + ' indexedDB=' + (!!window.indexedDB));
 
 document.getElementById('google-signin').addEventListener('click', async () => {
