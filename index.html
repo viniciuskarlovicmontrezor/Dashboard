@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Finanziario — 24/06/2026</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 1.4rem; color: #a78bfa; margin-bottom: 2px; }
+  .subtitle { font-size: 0.75rem; color: #64748b; margin-bottom: 20px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 8px; margin-bottom: 22px; max-width: 900px; margin-left: auto; margin-right: auto; }
+  .tab {
+    padding: 8px 22px; border-radius: 9px; font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; border: 1px solid #2d3148; background: #1a1d2e; color: #94a3b8;
+    transition: all 0.2s;
+  }
+  .tab.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+  .tab:hover:not(.active) { border-color: #a78bfa; color: #e2e8f0; }
+
+  .tab-content { display: none; max-width: 900px; margin: 0 auto; }
+  .tab-content.active { display: block; }
+
+  /* ===== PATRIMONIO ===== */
+  .donut-grid { display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: center; margin-bottom: 20px; }
+  .chart-wrap { position: relative; width: 320px; height: 320px; margin: auto; }
+  @media (max-width: 640px) {
+    .donut-grid { grid-template-columns: 1fr; gap: 16px; }
+    .chart-wrap { width: 220px; height: 220px; }
+    #donut { width: 220px; height: 220px; }
+    .two-col { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .wf-label { width: 110px; font-size: 0.68rem; }
+    .wf-val { width: 60px; font-size: 0.68rem; }
+    .leg-val { font-size: 0.82rem; }
+    .center-total { font-size: 0.9rem; }
+    h1 { font-size: 1.1rem; }
+  }
+  #donut { cursor: pointer; }
+  .center-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+  .center-total { font-size: 1.05rem; font-weight: 800; color: #a78bfa; }
+  .center-sub { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
+
+  .legend { display: flex; flex-direction: column; gap: 9px; }
+  .legend-item {
+    background: #1a1d2e; border-radius: 11px; padding: 12px 15px;
+    border: 1px solid #2d3148; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .legend-item:hover, .legend-item.active { border-color: #a78bfa; background: #1e1b4b; }
+  .dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+  .leg-text { flex: 1; }
+  .leg-label { font-size: 0.82rem; color: #cbd5e1; font-weight: 500; }
+  .leg-pct { font-size: 0.7rem; color: #64748b; margin-top: 1px; }
+  .leg-val { font-size: 0.95rem; font-weight: 700; color: #f1f5f9; }
+
+  .detail-panel {
+    background: #1a1d2e; border-radius: 14px; border: 1px solid #a78bfa55;
+    padding: 18px 22px; display: none; animation: fadeIn 0.3s ease; margin-bottom: 16px;
+  }
+  .detail-panel.show { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+  .detail-title { font-size: 0.88rem; font-weight: 700; color: #a78bfa; margin-bottom: 12px; display: flex; align-items: center; }
+  .detail-close { margin-left: auto; background: none; border: none; color: #475569; cursor: pointer; font-size: 1rem; }
+  .detail-close:hover { color: #f87171; }
+  .detail-grid { display: flex; flex-direction: column; gap: 7px; }
+  .detail-row { display: flex; align-items: center; gap: 10px; background: #0f1117; border-radius: 8px; padding: 9px 12px; }
+  .detail-icon { font-size: 0.9rem; width: 20px; text-align: center; flex-shrink: 0; }
+  .detail-name { flex: 1; font-size: 0.79rem; color: #cbd5e1; }
+  .detail-sub-text { font-size: 0.65rem; color: #475569; margin-top: 1px; }
+  .detail-amount { font-size: 0.85rem; font-weight: 700; text-align: right; }
+  .detail-pct-text { font-size: 0.65rem; color: #64748b; text-align: right; margin-top: 1px; }
+  .mini-bar-track { width: 70px; height: 5px; background: #2d3148; border-radius: 3px; margin-top: 4px; }
+  .mini-bar-fill { height: 100%; border-radius: 3px; }
+
+  .total-card {
+    background: linear-gradient(135deg, #1e1b4b, #1a1d2e);
+    border: 1px solid #a78bfa44; border-radius: 12px;
+    padding: 14px 22px; text-align: center; margin-top: 4px;
+  }
+  .total-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; }
+  .total-value { font-size: 1.9rem; font-weight: 900; color: #a78bfa; margin-top: 4px; }
+  .total-note { font-size: 0.68rem; color: #475569; margin-top: 4px; }
+  .hint { text-align: center; font-size: 0.7rem; color: #3d4b61; margin-bottom: 10px; }
+
+  /* ===== FLUSSO ===== */
+  .cards {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;
+  }
+  .card { background: #1a1d2e; border-radius: 11px; padding: 12px 14px; border: 1px solid #2d3148; text-align: center; }
+  .card-label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+  .card-val { font-size: 1.15rem; font-weight: 800; }
+  .card-sub { font-size: 0.65rem; color: #475569; margin-top: 3px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .section-card { background: #1a1d2e; border-radius: 13px; padding: 16px 18px; border: 1px solid #2d3148; }
+  .section-title { font-size: 0.78rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .section-total { font-size: 0.85rem; font-weight: 800; }
+
+  .flow-row-item { display: flex; flex-direction: column; gap: 7px; }
+  .flow-item {
+    display: flex; align-items: center; gap: 9px;
+    background: #0f1117; border-radius: 8px; padding: 8px 10px;
+  }
+  .fi-icon { font-size: 0.88rem; width: 20px; text-align: center; flex-shrink: 0; }
+  .fi-name { flex: 1; font-size: 0.76rem; color: #cbd5e1; }
+  .fi-sub { font-size: 0.63rem; color: #475569; margin-top: 1px; }
+  .fi-right { text-align: right; }
+  .fi-val { font-size: 0.8rem; font-weight: 700; }
+  .fi-pct { font-size: 0.63rem; color: #64748b; margin-top: 1px; }
+  .bar-track { height: 4px; background: #2d3148; border-radius: 2px; margin-top: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; }
+  .sep { font-size: 0.62rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 4px; margin: 4px 0 2px; }
+
+  /* Waterfall */
+  .wf-wrap { background: #1a1d2e; border-radius: 13px; padding: 16px 20px; border: 1px solid #2d3148; margin-bottom: 14px; }
+  .wf-title { font-size: 0.76rem; font-weight: 700; color: #94a3b8; margin-bottom: 14px; }
+  .wf-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .wf-label { font-size: 0.72rem; color: #94a3b8; width: 160px; flex-shrink: 0; }
+  .wf-track { flex: 1; height: 20px; background: #0f1117; border-radius: 4px; position: relative; overflow: hidden; }
+  .wf-bar { height: 20px; border-radius: 4px; display: flex; align-items: center; padding: 0 7px; font-size: 0.68rem; font-weight: 700; color: white; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.8); transition: width 1s ease; }
+  .wf-val { font-size: 0.72rem; font-weight: 700; width: 75px; text-align: right; }
+
+  .deficit-box {
+    border-radius: 11px; padding: 14px 20px;
+    display: flex; align-items: center; gap: 14px;
+    border: 1px solid #f8717155; background: rgba(248,113,113,0.06);
+  }
+  .deficit-icon { font-size: 1.8rem; }
+  .deficit-text { flex: 1; }
+  .deficit-lbl { font-size: 0.68rem; color: #94a3b8; margin-bottom: 3px; }
+  .deficit-val { font-size: 1.5rem; font-weight: 900; color: #f87171; }
+  .deficit-note { font-size: 0.67rem; color: #64748b; margin-top: 3px; }
+  .deficit-months { text-align: right; }
+  .deficit-months-val { font-size: 1.1rem; font-weight: 800; color: #fb923c; }
+  .deficit-months-lbl { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
+
+  /* Shared */
+  .green { color: #34d399; } .red { color: #f87171; } .purple { color: #a78bfa; } .orange { color: #fb923c; }
+  .tooltip { position: fixed; background: #1e2130; border: 1px solid #a78bfa; border-radius: 8px; padding: 7px 11px; font-size: 0.72rem; color: #e2e8f0; pointer-events: none; display: none; z-index: 100; max-width: 200px; }
+</style>
+</head>
+<body>
+
+<h1>💼 Dashboard Finanziario Personale</h1>
+<p class="subtitle">Aggiornato al 01 luglio 2026 · Cambio: 1 EUR = 5,92 BRL · 1 EUR = 1,1371 USD</p>
+
+<div class="tabs" style="margin-bottom:22px;">
+  <div class="tab active" onclick="switchTab('patrimonio', this)">🏆 Patrimonio Netto</div>
+  <div class="tab" onclick="switchTab('flusso', this)">📊 Flusso Mensile</div>
+</div>
+
+<!-- ===== TAB 1: PATRIMONIO ===== -->
+<div class="tab-content active" id="tab-patrimonio">
+
+  <div class="donut-grid">
+    <div>
+      <div class="chart-wrap">
+        <canvas id="donut" width="320" height="320"></canvas>
+        <div class="center-label">
+          <div class="center-total" id="center-val">€ 315.210</div>
+          <div class="center-sub" id="center-sub">patrimonio totale</div>
+        </div>
+      </div>
+      <p class="hint">👆 Clicca per vedere i dettagli</p>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="detail-panel" id="detail">
+    <div class="detail-title">
+      <span id="detail-title-text"></span>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-grid" id="detail-grid"></div>
+  </div>
+
+  <div class="total-card">
+    <div class="total-label">💰 Patrimonio Netto Totale</div>
+    <div class="total-value">€ 315.210</div>
+    <div class="total-note">Immobili · Precatório · Investimenti · Liquidità</div>
+  </div>
+</div>
+
+<!-- ===== TAB 2: FLUSSO ===== -->
+<div class="tab-content" id="tab-flusso">
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">✅ Entrate</div>
+      <div class="card-val green">+€ 1.003</div>
+      <div class="card-sub">4 affitti SP</div>
+    </div>
+    <div class="card">
+      <div class="card-label">🔴 Uscite Fisse</div>
+      <div class="card-val red">−€ 1.765</div>
+      <div class="card-sub">Affitto + utenze + sport</div>
+    </div>
+    <div class="card">
+      <div class="card-label">🛒 Spese Variabili</div>
+      <div class="card-val orange">−€ 0,00</div>
+      <div class="card-sub">Luglio 2026 · 0 voci</div>
+    </div>
+    <div class="card">
+      <div class="card-label">⚖️ Saldo Netto</div>
+      <div class="card-val red">−€ 739</div>
+      <div class="card-sub">Deficit mensile</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- Entrate -->
+    <div class="section-card">
+      <div class="section-title">
+        <span class="green">✅ ENTRATE</span>
+        <span class="section-total green">+€ 1.009,60</span>
+      </div>
+      <div class="flow-row-item" id="income-rows"></div>
+    </div>
+    <!-- Costi Fissi -->
+    <div class="section-card">
+      <div class="section-title">
+        <span class="red">🔴 COSTI FISSI</span>
+        <span class="section-total red">−€ 1.764,64</span>
+      </div>
+      <div class="flow-row-item" id="expense-rows"></div>
+    </div>
+    <!-- Spese Variabili -->
+    <div class="section-card" style="border-color:#fb923c44;">
+      <div class="section-title">
+        <span class="orange">🛒 SPESE VARIABILI</span>
+        <span class="section-total orange">−€ 0,00</span>
+      </div>
+      <div class="flow-row-item" id="var-rows"></div>
+    </div>
+  </div>
+
+  <!-- Waterfall -->
+  <div class="wf-wrap">
+    <div class="wf-title">📉 Cascata del Flusso Mensile</div>
+    <div id="waterfall"></div>
+  </div>
+
+  <!-- Deficit -->
+  <div class="deficit-box">
+    <div class="deficit-icon">⚠️</div>
+    <div class="deficit-text">
+      <div class="deficit-lbl">DEFICIT MENSILE CORRENTE</div>
+      <div class="deficit-val">−€ 739,95</div>
+      <div class="deficit-note">Luglio 2026 iniziato · Spese variabili: €0 · Liquidità: € 5.388 · ❄️ Rata condiz. fino a ott 2026</div>
+    </div>
+    <div class="deficit-months">
+      <div class="deficit-months-val">~7 mesi</div>
+      <div class="deficit-months-lbl">autonomia con<br>liquidità attuale</div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const fmt = v => '€ ' + Math.abs(v).toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtBRL = v => 'R$ ' + Math.abs(v).toLocaleString('it-IT', {minimumFractionDigits:0});
+
+/* ===== TABS ===== */
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ===== PATRIMONIO DATA ===== */
+const categories = [
+  { label:'🏠 Immobili', sub:'4 SP + Florianópolis', value:237331, color:'#7c3aed',
+    items:[
+      { icon:'🏠', name:'Casa Rua Rodolfo Garcia, 167', sub:'Jabaquara · SP', eur:67568, brl:400000 },
+      { icon:'🏠', name:'Av. Leonardo da Vinci, 670 Ap.53', sub:'Vila Guarani · SP', eur:59122, brl:350000 },
+      { icon:'🏠', name:'Rua Dr. Nicolau Defina, 167 Ap.84', sub:'Jardim da Saúde · SP', eur:40541, brl:240000 },
+      { icon:'🏠', name:'Av. Antônio Severiano, 169', sub:'Aviação · SP', eur:40541, brl:240000 },
+      { icon:'🏝️', name:'Rodovia Baldicero Filomeno 18.309', sub:'Caieira da Barra do Sul · Florianópolis', eur:29561, brl:175000 },
+    ]
+  },
+  { label:'⚖️ Precatório', sub:'Credito Stato Brasiliano', value:58842, color:'#2563eb',
+    items:[
+      { icon:'⚖️', name:'Precatório — tuo nome', sub:'R$ 174.172 · in attesa pagamento', eur:29421, brl:174172 },
+      { icon:'⚖️', name:'Precatório — eredità padre', sub:'R$ 174.172 · in attesa pagamento', eur:29421, brl:174172 },
+    ]
+  },
+  { label:'📈 Investimenti', sub:'XP BR · Avenue · XP Int. · BTC', value:13654, color:'#059669',
+    items:[
+      { icon:'🇺🇸', name:'Portafoglio Avenue', sub:'LMT · RY · BAC · RKLB · T · WBD + cash $33', eur:6980, usd:7935 },
+      { icon:'🇧🇷', name:'Portafoglio XP Brasile', sub:'FII · Azioni · Trend Investback', eur:5091, brl:30135 },
+      { icon:'🇺🇸', name:'XP Internazionale', sub:'PFE · SHY + cash $132,50', eur:1033, usd:1175 },
+      { icon:'₿', name:'Bitcoin (Revolut)', sub:'0,010 BTC · $62.630/BTC', eur:551, usd:626 },
+    ]
+  },
+  { label:'🏦 Liquidità', sub:'Tutti i conti correnti', value:5383, color:'#d97706',
+    items:[
+      { icon:'🏦', name:'Wise (EUR)', sub:'Conto Wise euro', eur:1610 },
+      { icon:'🏦', name:'Wise (BRL)', sub:'R$ 11.401', eur:1925, brl:11401 },
+      { icon:'🏦', name:'Cofrinhos', sub:'R$ 5.034', eur:850, brl:5034 },
+      { icon:'🏦', name:'Isybank', sub:'Conto digitale Italia · saldo al 30/06', eur:280.61 },
+      { icon:'🏦', name:'BBVA', sub:'Conto corrente Italia', eur:303 },
+      { icon:'🏦', name:'Itaú', sub:'R$ 1.481,41', eur:250.24, brl:1481 },
+      { icon:'🏦', name:'XP Conto Corrente', sub:'R$ 578,46', eur:97.71, brl:578 },
+      { icon:'🏦', name:'XP Saldo disponibile investimento', sub:'R$ 554,72', eur:93.70, brl:555 },
+      { icon:'💳', name:'Fattura CC aperta', sub:'Debito R$ 171,66', eur:-29, brl:-172 },
+    ]
+  }
+];
+
+const totalPat = categories.reduce((s,c) => s+c.value, 0);
+let activeIdx = null;
+
+/* Donut */
+const canvas = document.getElementById('donut');
+const ctx = canvas.getContext('2d');
+const cx=160, cy=160, R=108, rIn=62;
+const sliceAngles = [];
+
+function lighten(hex) {
+  const n = parseInt(hex.slice(1),16);
+  return `rgb(${Math.min(255,((n>>16)&0xff)+45)},${Math.min(255,((n>>8)&0xff)+45)},${Math.min(255,(n&0xff)+45)})`;
+}
+
+function drawDonut(hl=null) {
+  ctx.clearRect(0,0,280,280);
+  let angle = -Math.PI/2;
+  const gap = 0.025;
+  categories.forEach((d,i) => {
+    const sweep = (d.value/totalPat)*2*Math.PI - gap;
+    const isHL = hl===i;
+    const ro = isHL ? R+8 : R;
+    ctx.beginPath();
+    ctx.arc(cx,cy,ro,angle+gap/2,angle+sweep+gap/2);
+    ctx.arc(cx,cy,rIn,angle+sweep+gap/2,angle+gap/2,true);
+    ctx.closePath();
+    ctx.fillStyle = isHL ? lighten(d.color) : d.color;
+    ctx.fill();
+    if(isHL){ ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke(); }
+    sliceAngles[i]={start:angle+gap/2, end:angle+sweep+gap/2};
+    angle += sweep+gap;
+  });
+
+  // Draw labels outside slices with lines
+  angle = -Math.PI/2;
+  categories.forEach((d,i) => {
+    const sweep = (d.value/totalPat)*2*Math.PI - gap;
+    const pct = ((d.value/totalPat)*100).toFixed(1);
+    const midAngle = angle + gap/2 + sweep/2;
+
+    const names = ['Immobili','Precatório','Investim.','Liquidità'];
+    const name = names[i];
+
+    // Line start (edge of slice)
+    const lineStart = R + 6;
+    const lineEnd = R + 22;
+    const labelDist = R + 30;
+
+    const x1 = cx + lineStart * Math.cos(midAngle);
+    const y1 = cy + lineStart * Math.sin(midAngle);
+    const x2 = cx + lineEnd * Math.cos(midAngle);
+    const y2 = cy + lineEnd * Math.sin(midAngle);
+    const lx = cx + labelDist * Math.cos(midAngle);
+    const ly = cy + labelDist * Math.sin(midAngle);
+
+    const isRight = Math.cos(midAngle) >= 0;
+    const textAlign = isRight ? 'left' : 'right';
+    const xOffset = isRight ? 4 : -4;
+
+    // Draw line
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Dot at end of line
+    ctx.beginPath();
+    ctx.arc(x2, y2, 2, 0, 2*Math.PI);
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fill();
+
+    // Background pill for text
+    ctx.save();
+    ctx.textAlign = textAlign;
+    ctx.font = 'bold 10px Segoe UI';
+    const nameW = ctx.measureText(name).width;
+    const pctW = ctx.measureText(pct+'%').width;
+    const maxW = Math.max(nameW, pctW);
+    const px = isRight ? lx + xOffset - 2 : lx + xOffset - maxW - 2;
+    ctx.fillStyle = 'rgba(15,17,23,0.75)';
+    ctx.beginPath();
+    ctx.roundRect(px, ly - 16, maxW + 8, 28, 4);
+    ctx.fill();
+
+    // Name text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10px Segoe UI';
+    ctx.fillText(name, lx + xOffset, ly - 4);
+
+    // Pct text
+    ctx.fillStyle = '#a78bfa';
+    ctx.font = 'bold 10px Segoe UI';
+    ctx.fillText(pct+'%', lx + xOffset, ly + 8);
+    ctx.restore();
+
+    angle += sweep+gap;
+  });
+}
+drawDonut();
+
+/* Legend */
+const legendEl = document.getElementById('legend');
+categories.forEach((d,i) => {
+  const pct = ((d.value/totalPat)*100).toFixed(1);
+  const el = document.createElement('div');
+  el.className='legend-item'; el.id='leg-'+i;
+  el.innerHTML=`<div class="dot" style="background:${d.color}"></div>
+    <div class="leg-text"><div class="leg-label">${d.label}</div>
+    <div class="leg-pct">${d.sub} · <b style="color:#a78bfa">${pct}%</b></div></div>
+    <div class="leg-val">${'€ '+d.value.toLocaleString('it-IT')}</div>`;
+  el.addEventListener('click',()=>toggleDetail(i));
+  legendEl.appendChild(el);
+});
+
+canvas.addEventListener('click', e => {
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(canvas.width/rect.width);
+  const my=(e.clientY-rect.top)*(canvas.height/rect.height);
+  const dx=mx-cx, dy=my-cy, dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<rIn||dist>R+12) return;
+  let a=Math.atan2(dy,dx)+Math.PI/2;
+  if(a<0) a+=2*Math.PI;
+  for(let i=0;i<categories.length;i++){
+    let s=sliceAngles[i].start+Math.PI/2, en=sliceAngles[i].end+Math.PI/2;
+    if(s<0)s+=2*Math.PI; if(en<0)en+=2*Math.PI; if(en<s)en+=2*Math.PI;
+    if(a>=s&&a<=en){toggleDetail(i);break;}
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(canvas.width/rect.width);
+  const my=(e.clientY-rect.top)*(canvas.height/rect.height);
+  const dx=mx-cx, dy=my-cy, dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<rIn||dist>R+12){drawDonut(activeIdx);canvas.style.cursor='default';return;}
+  let a=Math.atan2(dy,dx)+Math.PI/2;
+  if(a<0)a+=2*Math.PI;
+  for(let i=0;i<categories.length;i++){
+    let s=sliceAngles[i].start+Math.PI/2, en=sliceAngles[i].end+Math.PI/2;
+    if(s<0)s+=2*Math.PI; if(en<0)en+=2*Math.PI; if(en<s)en+=2*Math.PI;
+    if(a>=s&&a<=en){drawDonut(i);canvas.style.cursor='pointer';return;}
+  }
+  drawDonut(activeIdx);
+});
+
+function toggleDetail(i) {
+  if(activeIdx===i){closeDetail();return;}
+  activeIdx=i;
+  drawDonut(i);
+  document.querySelectorAll('.legend-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('leg-'+i).classList.add('active');
+  const cat=categories[i];
+  const pct=((cat.value/totalPat)*100).toFixed(1);
+  document.getElementById('center-val').textContent='€ '+cat.value.toLocaleString('it-IT');
+  document.getElementById('center-sub').textContent=pct+'% del totale';
+  document.getElementById('detail-title-text').textContent=cat.label+' — €'+cat.value.toLocaleString('it-IT');
+  const maxV=Math.max(...cat.items.map(it=>Math.abs(it.eur)));
+  const grid=document.getElementById('detail-grid');
+  grid.innerHTML='';
+  cat.items.forEach(it=>{
+    const pctI=((Math.abs(it.eur)/cat.value)*100).toFixed(1);
+    const bW=((Math.abs(it.eur)/maxV)*100).toFixed(1);
+    const col=it.eur<0?'#f87171':cat.color;
+    const sign=it.eur<0?'−':'';
+    let extra='';
+    if(it.brl) extra=` <span style="color:#475569;font-size:0.63rem">(${fmtBRL(it.brl)})</span>`;
+    if(it.usd) extra=` <span style="color:#475569;font-size:0.63rem">($${Math.abs(it.usd).toLocaleString('it-IT')})</span>`;
+    const row=document.createElement('div');
+    row.className='detail-row';
+    row.innerHTML=`<div class="detail-icon">${it.icon}</div>
+      <div style="flex:1"><div class="detail-name">${it.name}</div>
+      <div class="detail-sub-text">${it.sub}</div>
+      <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${bW}%;background:${col}"></div></div></div>
+      <div><div class="detail-amount" style="color:${col}">${sign}€ ${Math.abs(it.eur).toLocaleString('it-IT')}${extra}</div>
+      <div class="detail-pct-text">${it.eur>0?pctI+'%':'debito'}</div></div>`;
+    grid.appendChild(row);
+  });
+  document.getElementById('detail').className='detail-panel show';
+}
+
+function closeDetail(){
+  activeIdx=null; drawDonut();
+  document.querySelectorAll('.legend-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('detail').className='detail-panel';
+  document.getElementById('center-val').textContent='€ 315.210';
+  document.getElementById('center-sub').textContent='patrimonio totale';
+}
+
+/* ===== FLUSSO DATA ===== */
+const incomes = [
+  {icon:'🏠',name:'Rua Dr. Nicolau Defina, 167',sub:'Jardim da Saúde · SP',eur:177.40,brl:1050},
+  {icon:'🏠',name:'Av. Leonardo da Vinci, 670',sub:'Vila Guarani · SP',eur:349.66,brl:2070},
+  {icon:'🏠',name:'Av. Antônio Severiano, 169',sub:'Aviação · SP',eur:256.76,brl:1520},
+  {icon:'🏠',name:'Rua Rodolfo Garcia, 167',sub:'Jabaquara · SP',eur:219.59,brl:1300},
+];
+const fixedExp = [
+  {icon:'🏠',name:'Affitto Via Ebro 9, Ap.23',sub:'Milano',eur:1300,cat:'Casa'},
+  {icon:'💪',name:'Virgin Active Palestra',sub:'Abbonamento mensile',eur:160,cat:'Salute'},
+  {icon:'⚡',name:'A2A Luce',sub:'€180 ogni 2 mesi',eur:90,cat:'Utenze'},
+  {icon:'📱',name:'TIM Fibra + Telefono',sub:'Piano fisso mensile',eur:38.80,cat:'Utenze'},
+  {icon:'💻',name:'Abbonamenti Software',sub:'Amazon · YouTube · Claude · Windows',eur:53,cat:'Software'},
+  {icon:'🔥',name:'A2A Gas',sub:'€50 ogni 2 mesi',eur:25,cat:'Utenze'},
+  {icon:'🏝️',name:'Casa Florianópolis',sub:'IPTU + Rampa + CELESC',eur:25.84,cat:'Casa BR'},
+  {icon:'❄️',name:'Condizionatore portatile (rata)',sub:'5 rate · giu–ott 2026 · €359,99 totale',eur:72,cat:'Casa'},
+];
+// ── RIEPILOGO GIUGNO 2026 (chiuso) ──
+const giugnoExp = [
+  {icon:'☕',name:'Caffè',sub:'24/06 · Isybank',eur:3,cat:'Svago'},
+  {icon:'🍽️',name:'Cena',sub:'24/06 · Isybank',eur:12,cat:'Ristoranti'},
+  {icon:'🧸',name:'Funko Ging Freecss',sub:'24/06 · Isybank',eur:12.30,cat:'Svago'},
+  {icon:'🛒',name:'Spesa',sub:'25/06 · Isybank',eur:33.25,cat:'Alimentari'},
+  {icon:'😷',name:'Mascherine',sub:'26/06 · Isybank',eur:2.25,cat:'Salute'},
+  {icon:'💊',name:'Medicina pollice',sub:'26/06 · Isybank',eur:23.65,cat:'Salute'},
+  {icon:'🦴',name:'Tutore pollice',sub:'26/06 · Isybank',eur:36,cat:'Salute'},
+  {icon:'🍽️',name:'Pranzo collaborazione',sub:'26/06 · Isybank',eur:10.40,cat:'Ristoranti'},
+  {icon:'🍦',name:'Gelati',sub:'26/06 · Isybank',eur:8,cat:'Svago'},
+  {icon:'🍽️',name:'Pranzo',sub:'27/06 · Isybank',eur:6.20,cat:'Ristoranti'},
+  {icon:'☕',name:'Caffè',sub:'27/06 · Isybank',eur:1.50,cat:'Svago'},
+  {icon:'🛍️',name:'Amazon Prime extra',sub:'27/06 · Isybank',eur:4.99,cat:'Software'},
+  {icon:'🚌',name:'Trasporto',sub:'28/06 · Isybank',eur:2.20,cat:'Trasporti'},
+  {icon:'🎉',name:'Serata',sub:'28/06 · Isybank',eur:15.50,cat:'Svago'},
+  {icon:'📦',name:'Amazon Ad Free',sub:'28/06 · Isybank',eur:2,cat:'Software'},
+  {icon:'🛵',name:'Cena Glovo',sub:'28/06 · Isybank',eur:18.99,cat:'Ristoranti'},
+  {icon:'🛵',name:'Cena Glovo',sub:'28/06 · Isybank',eur:20,cat:'Ristoranti'},
+  {icon:'☕',name:'Caffè',sub:'29/06 · Isybank',eur:1.50,cat:'Svago'},
+  {icon:'⚡',name:'Bevanda energetica',sub:'29/06 · Isybank',eur:2.20,cat:'Svago'},
+  {icon:'🚌',name:'Trasporto',sub:'29/06 · Isybank',eur:2.20,cat:'Trasporti'},
+  {icon:'🍽️',name:'Cena',sub:'29/06 · Isybank',eur:15,cat:'Ristoranti'},
+  {icon:'☕',name:'Caffè',sub:'29/06 · Isybank',eur:1.10,cat:'Svago'},
+  {icon:'🍽️',name:'Pranzo',sub:'29/06 · Isybank',eur:7.90,cat:'Ristoranti'},
+  {icon:'🧴',name:'Deodorante',sub:'29/06 · Isybank',eur:3.98,cat:'Salute'},
+  {icon:'🥤',name:'Proteine',sub:'29/06 · Isybank',eur:6.94,cat:'Alimentari'},
+  {icon:'🛒',name:'Spesa',sub:'30/06 · Isybank',eur:12.94,cat:'Alimentari'},
+  {icon:'🍽️',name:'Pranzo e cena',sub:'30/06 · Isybank',eur:12.40,cat:'Ristoranti'},
+];
+// ── LUGLIO 2026 (in corso) ──
+const varExp = [];
+
+const totalInc = incomes.reduce((s,i)=>s+i.eur,0);
+const totalFix = fixedExp.reduce((s,i)=>s+i.eur,0);
+const totalVar = varExp.reduce((s,i)=>s+i.eur,0);
+const totalExp2 = totalFix+totalVar;
+
+/* Income rows */
+const incRowEl = document.getElementById('income-rows');
+const maxInc = Math.max(...incomes.map(i=>i.eur));
+incomes.forEach(item=>{
+  const pct=((item.eur/totalInc)*100).toFixed(1);
+  const bW=((item.eur/maxInc)*100).toFixed(1);
+  const el=document.createElement('div');
+  el.className='flow-item';
+  el.innerHTML=`<div class="fi-icon">${item.icon}</div>
+    <div style="flex:1"><div class="fi-name">${item.name}<div class="fi-sub">${item.sub}</div></div>
+    <div class="bar-track"><div class="bar-fill" style="width:0%;background:#34d399" data-w="${bW}%"></div></div></div>
+    <div class="fi-right"><div class="fi-val green">+${fmt(item.eur)}</div>
+    <div class="fi-pct">${pct}% entrate</div></div>`;
+  incRowEl.appendChild(el);
+});
+
+/* Expense rows */
+const expRowEl = document.getElementById('expense-rows');
+const varRowEl = document.getElementById('var-rows');
+const maxFixed = Math.max(...fixedExp.map(i=>i.eur));
+const maxVar = Math.max(...varExp.map(i=>i.eur));
+
+fixedExp.forEach(item=>{
+  const pct=((item.eur/totalFix)*100).toFixed(1);
+  const bW=((item.eur/maxFixed)*100).toFixed(1);
+  const el=document.createElement('div'); el.className='flow-item';
+  el.innerHTML=`<div class="fi-icon">${item.icon}</div>
+    <div style="flex:1"><div class="fi-name">${item.name}<div class="fi-sub">${item.sub}</div></div>
+    <div class="bar-track"><div class="bar-fill" style="width:0%;background:#f87171" data-w="${bW}%"></div></div></div>
+    <div class="fi-right"><div class="fi-val red">−${fmt(item.eur)}</div>
+    <div class="fi-pct">${pct}% fissi</div></div>`;
+  expRowEl.appendChild(el);
+});
+
+varExp.forEach(item=>{
+  const pct=((item.eur/totalVar)*100).toFixed(1);
+  const bW=((item.eur/maxVar)*100).toFixed(1);
+  const el=document.createElement('div'); el.className='flow-item';
+  el.innerHTML=`<div class="fi-icon">${item.icon}</div>
+    <div style="flex:1"><div class="fi-name">${item.name}<div class="fi-sub">${item.sub}</div></div>
+    <div class="bar-track"><div class="bar-fill" style="width:0%;background:#fb923c" data-w="${bW}%"></div></div></div>
+    <div class="fi-right"><div class="fi-val orange">−${fmt(item.eur)}</div>
+    <div class="fi-pct">${pct}% var.</div></div>`;
+  varRowEl.appendChild(el);
+});
+
+/* Waterfall */
+const wfData = [
+  {label:'✅ Entrate affitti', val:totalInc, color:'#34d399'},
+  {label:'🏠 Affitto Via Ebro', val:-1300, color:'#f87171'},
+  {label:'💪 Virgin Active', val:-160, color:'#f87171'},
+  {label:'⚡ A2A Luce', val:-90, color:'#f87171'},
+  {label:'📱 TIM Fibra + Tel.', val:-38.80, color:'#f87171'},
+  {label:'💻 Abbonamenti SW', val:-53, color:'#f87171'},
+  {label:'🔥 A2A Gas', val:-25, color:'#f87171'},
+  {label:'🏝️ Casa Florianópolis', val:-25.84, color:'#f87171'},
+  {label:'❄️ Condizionatore (rata)', val:-72, color:'#f87171'},
+  {label:'🛒 Spese variabili luglio', val:0, color:'#fb923c'},
+  {label:'⚖️ Saldo Finale', val:totalInc-totalExp2, color:'#f87171'},
+];
+const maxWF = totalInc;
+const wfEl = document.getElementById('waterfall');
+wfData.forEach(d=>{
+  const w=Math.abs((d.val/maxWF)*100).toFixed(1);
+  const sign=d.val>0?'+':'−';
+  const row=document.createElement('div'); row.className='wf-row';
+  row.innerHTML=`<div class="wf-label">${d.label}</div>
+    <div class="wf-track"><div class="wf-bar" style="width:0%;background:${d.color}" data-w="${w}%">${w>10?sign+fmt(d.val):''}</div></div>
+    <div class="wf-val" style="color:${d.color}">${sign+fmt(d.val)}</div>`;
+  wfEl.appendChild(row);
+});
+
+/* Animate */
+setTimeout(()=>{
+  document.querySelectorAll('.bar-fill, .wf-bar').forEach(b=>{
+    if(b.dataset.w) b.style.width=b.dataset.w;
+  });
+},150);
+
+/* Tooltip */
+const tip=document.getElementById('tooltip');
+document.querySelectorAll('.flow-item').forEach(el=>{
+  el.addEventListener('mousemove',e=>{ tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px'; });
+  el.addEventListener('mouseleave',()=>tip.style.display='none');
+});
+</script>
+</body>
+</html>
