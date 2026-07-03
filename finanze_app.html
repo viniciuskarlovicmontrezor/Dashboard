@@ -494,6 +494,7 @@
   <div class="tabs" style="margin-bottom:22px;">
     <div class="tab active" onclick="switchTab('patrimonio', this)">🏆 Patrimonio Netto</div>
     <div class="tab" onclick="switchTab('flusso', this)">📊 Flusso Mensile</div>
+    <div class="tab" onclick="switchTab('storico', this)">📅 Storico Mensile</div>
   </div>
 
   <!-- ===== TAB 1: PATRIMONIO ===== -->
@@ -528,14 +529,8 @@
     </div>
   </div>
 
-  <!-- ===== TAB 2: FLUSSO ===== -->
+  <!-- ===== TAB 2: FLUSSO (mese corrente, lista fissa) ===== -->
   <div class="tab-content" id="tab-flusso">
-
-    <div class="month-nav">
-      <button class="month-arrow" onclick="monthPrev()">←</button>
-      <div class="month-label">Mese</div>
-      <button class="month-arrow" onclick="monthNext()">→</button>
-    </div>
 
     <div class="cards">
       <div class="card">
@@ -599,6 +594,81 @@
       <div class="deficit-months">
         <div class="deficit-months-val" id="deficit-months-val-el">—</div>
         <div class="deficit-months-lbl" id="deficit-months-lbl-el"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB 3: STORICO MENSILE (navigabile) ===== -->
+  <div class="tab-content" id="tab-storico">
+
+    <div class="month-nav">
+      <button class="month-arrow" onclick="monthPrev()">←</button>
+      <div class="month-label">Mese</div>
+      <button class="month-arrow" onclick="monthNext()">→</button>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">✅ Entrate</div>
+        <div class="card-val green" id="fc-income-h">+€ 0</div>
+        <div class="card-sub" id="fc-income-sub-h"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">🔴 Costi Fissi</div>
+        <div class="card-val red" id="fc-fixed-h">−€ 0</div>
+        <div class="card-sub" id="fc-fixed-sub-h"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">🛒 Spese Variabili</div>
+        <div class="card-val orange" id="fc-variable-h">−€ 0</div>
+        <div class="card-sub" id="fc-variable-sub-h"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">⚖️ Saldo Netto</div>
+        <div class="card-val red" id="fc-net-h">−€ 0</div>
+        <div class="card-sub" id="fc-net-sub-h"></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="section-card">
+        <div class="section-title">
+          <span class="green">✅ ENTRATE</span>
+          <span class="section-total green" id="income-total-h">+€ 0</span>
+        </div>
+        <div class="flow-row-item" id="income-rows-h"></div>
+      </div>
+      <div class="section-card">
+        <div class="section-title">
+          <span class="red">🔴 COSTI FISSI</span>
+          <span class="section-total red" id="fixed-total-h">−€ 0</span>
+        </div>
+        <div class="flow-row-item" id="expense-rows-h"></div>
+      </div>
+      <div class="section-card" style="border-color:#fb923c44;">
+        <div class="section-title">
+          <span class="orange">🛒 SPESE VARIABILI</span>
+          <span class="section-total orange" id="variable-total-h">−€ 0</span>
+        </div>
+        <div class="flow-row-item" id="var-rows-h"></div>
+      </div>
+    </div>
+
+    <div class="wf-wrap">
+      <div class="wf-title">📉 Cascata del Flusso Mensile</div>
+      <div id="waterfall-h"></div>
+    </div>
+
+    <div class="deficit-box" id="deficit-box-el-h">
+      <div class="deficit-icon" id="deficit-icon-el-h">⚠️</div>
+      <div class="deficit-text">
+        <div class="deficit-lbl" id="deficit-lbl-el-h">DEFICIT MENSILE CORRENTE</div>
+        <div class="deficit-val" id="deficit-val-el-h">−€ 0</div>
+        <div class="deficit-note" id="deficit-note-el-h"></div>
+      </div>
+      <div class="deficit-months">
+        <div class="deficit-months-val" id="deficit-months-val-el-h">—</div>
+        <div class="deficit-months-lbl" id="deficit-months-lbl-el-h"></div>
       </div>
     </div>
   </div>
@@ -1287,7 +1357,7 @@ window.monthNext = function() { selectedMonth = addMonths(selectedMonth,1); refr
 function refreshMonthViews() {
   document.querySelectorAll('.month-label').forEach(el=>el.textContent = monthLabel(selectedMonth));
   renderRecurringPanel();
-  renderFlusso();
+  renderFlussoInto(selectedMonth, '-h');
 }
 
 /* ===== DASHBOARD: PATRIMONIO ===== */
@@ -1499,21 +1569,25 @@ drawDonut();
 function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 
 function renderFlusso() {
-  const monthKey = selectedMonth;
+  renderFlussoInto(currentMonthKey(), '');
+  renderFlussoInto(selectedMonth, '-h');
+}
+
+function renderFlussoInto(monthKey, suffix) {
   const d = getMonthData(monthKey);
   const saldo = d.totalIncomeReceived - d.totalFixedPaid - d.totalVariable;
 
-  setText('fc-income', '+'+fmt(d.totalIncomeReceived));
-  setText('fc-income-sub', (d.totalIncomeExpected-d.totalIncomeReceived>0.01) ? (fmt(d.totalIncomeExpected-d.totalIncomeReceived)+' attesi') : 'tutte incassate');
-  setText('fc-fixed', '−'+fmt(d.totalFixedPaid));
-  setText('fc-fixed-sub', d.totalFixedPending>0.01 ? (fmt(d.totalFixedPending)+' ancora da pagare') : 'tutti pagati');
-  setText('fc-variable', '−'+fmt(d.totalVariable));
-  setText('fc-variable-sub', monthLabel(monthKey)+' · '+d.variableCount+' voci');
-  setText('fc-net', (saldo>=0?'+':'−')+fmt(saldo));
-  const netEl = document.getElementById('fc-net'); if (netEl) netEl.className = 'card-val '+(saldo>=0?'green':'red');
-  setText('fc-net-sub', saldo>=0?'Saldo positivo':'Deficit mensile');
+  setText('fc-income'+suffix, '+'+fmt(d.totalIncomeReceived));
+  setText('fc-income-sub'+suffix, (d.totalIncomeExpected-d.totalIncomeReceived>0.01) ? (fmt(d.totalIncomeExpected-d.totalIncomeReceived)+' attesi') : 'tutte incassate');
+  setText('fc-fixed'+suffix, '−'+fmt(d.totalFixedPaid));
+  setText('fc-fixed-sub'+suffix, d.totalFixedPending>0.01 ? (fmt(d.totalFixedPending)+' ancora da pagare') : 'tutti pagati');
+  setText('fc-variable'+suffix, '−'+fmt(d.totalVariable));
+  setText('fc-variable-sub'+suffix, monthLabel(monthKey)+' · '+d.variableCount+' voci');
+  setText('fc-net'+suffix, (saldo>=0?'+':'−')+fmt(saldo));
+  const netEl = document.getElementById('fc-net'+suffix); if (netEl) netEl.className = 'card-val '+(saldo>=0?'green':'red');
+  setText('fc-net-sub'+suffix, saldo>=0?'Saldo positivo':'Deficit mensile');
 
-  const incEl = document.getElementById('income-rows'); incEl.innerHTML='';
+  const incEl = document.getElementById('income-rows'+suffix); incEl.innerHTML='';
   if (d.incomeRows.length) {
     const maxIncAmt = Math.max(1, ...d.incomeRows.map(r=>r.eur));
     d.incomeRows.forEach(r => {
@@ -1527,9 +1601,9 @@ function renderFlusso() {
       incEl.appendChild(el);
     });
   } else { incEl.innerHTML = '<div style="text-align:center;color:#475569;font-size:0.75rem;padding:10px;">Nessuna entrata configurata</div>'; }
-  setText('income-total', '+'+fmt(d.totalIncomeReceived));
+  setText('income-total'+suffix, '+'+fmt(d.totalIncomeReceived));
 
-  const fixEl = document.getElementById('expense-rows'); fixEl.innerHTML='';
+  const fixEl = document.getElementById('expense-rows'+suffix); fixEl.innerHTML='';
   if (d.fixedRows.length) {
     const maxFixAmt = Math.max(1, ...d.fixedRows.map(r=>r.eur));
     d.fixedRows.forEach(r => {
@@ -1544,9 +1618,9 @@ function renderFlusso() {
       fixEl.appendChild(el);
     });
   } else { fixEl.innerHTML = '<div style="text-align:center;color:#475569;font-size:0.75rem;padding:10px;">Nessun costo fisso configurato</div>'; }
-  setText('fixed-total', '−'+fmt(d.totalFixedPaid+d.totalFixedPending));
+  setText('fixed-total'+suffix, '−'+fmt(d.totalFixedPaid+d.totalFixedPending));
 
-  const varEl = document.getElementById('var-rows'); varEl.innerHTML='';
+  const varEl = document.getElementById('var-rows'+suffix); varEl.innerHTML='';
   if (d.variableRows.length) {
     const maxVarAmt = Math.max(1, ...d.variableRows.map(r=>r.eur));
     d.variableRows.forEach(r => {
@@ -1560,9 +1634,9 @@ function renderFlusso() {
       varEl.appendChild(el);
     });
   } else { varEl.innerHTML = '<div style="text-align:center;color:#475569;font-size:0.75rem;padding:10px;">Nessuna spesa variabile registrata</div>'; }
-  setText('variable-total', '−'+fmt(d.totalVariable));
+  setText('variable-total'+suffix, '−'+fmt(d.totalVariable));
 
-  const wfEl = document.getElementById('waterfall'); wfEl.innerHTML='';
+  const wfEl = document.getElementById('waterfall'+suffix); wfEl.innerHTML='';
   const wfData = [{label:'✅ Entrate', val:d.totalIncomeReceived, color:'#34d399'}];
   d.fixedRows.filter(r=>!r.pending).forEach(r=>wfData.push({label:r.icon+' '+r.name, val:-r.eur, color:'#f87171'}));
   if (d.totalVariable>0) wfData.push({label:'🛒 Spese variabili', val:-d.totalVariable, color:'#fb923c'});
@@ -1578,20 +1652,20 @@ function renderFlusso() {
     wfEl.appendChild(row);
   });
 
-  const box = document.getElementById('deficit-box-el');
+  const box = document.getElementById('deficit-box-el'+suffix);
   box.className = 'deficit-box'+(saldo>=0?' positive':'');
-  setText('deficit-icon-el', saldo>=0?'🎉':'⚠️');
-  setText('deficit-lbl-el', saldo>=0?'SALDO POSITIVO DEL MESE':'DEFICIT MENSILE CORRENTE');
-  setText('deficit-val-el', (saldo>=0?'+':'−')+fmt(saldo));
+  setText('deficit-icon-el'+suffix, saldo>=0?'🎉':'⚠️');
+  setText('deficit-lbl-el'+suffix, saldo>=0?'SALDO POSITIVO DEL MESE':'DEFICIT MENSILE CORRENTE');
+  setText('deficit-val-el'+suffix, (saldo>=0?'+':'−')+fmt(saldo));
   const liquidity = ACCOUNTS.reduce((s,a)=>s+toEur(getAccountBalance(a.id),a.currency),0);
-  setText('deficit-note-el', `${monthLabel(monthKey)} · Spese variabili: ${fmt(d.totalVariable)} · Liquidità: €${liquidity.toLocaleString('it-IT',{maximumFractionDigits:0})}`);
+  setText('deficit-note-el'+suffix, `${monthLabel(monthKey)} · Spese variabili: ${fmt(d.totalVariable)} · Liquidità: €${liquidity.toLocaleString('it-IT',{maximumFractionDigits:0})}`);
   if (saldo<0) {
     const months = liquidity/Math.abs(saldo);
-    setText('deficit-months-val-el', '~'+months.toFixed(0)+' mesi');
-    document.getElementById('deficit-months-lbl-el').innerHTML = 'autonomia con<br>liquidità attuale';
+    setText('deficit-months-val-el'+suffix, '~'+months.toFixed(0)+' mesi');
+    document.getElementById('deficit-months-lbl-el'+suffix).innerHTML = 'autonomia con<br>liquidità attuale';
   } else {
-    setText('deficit-months-val-el', '👍');
-    document.getElementById('deficit-months-lbl-el').innerHTML = 'mese in equilibrio<br>o attivo';
+    setText('deficit-months-val-el'+suffix, '👍');
+    document.getElementById('deficit-months-lbl-el'+suffix).innerHTML = 'mese in equilibrio<br>o attivo';
   }
 }
 
