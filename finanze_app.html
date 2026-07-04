@@ -348,6 +348,7 @@
 <div class="log-header">
   <span>Registrate oggi</span>
   <span class="log-clear" id="clear-label">Aggiorna</span>
+  <span class="log-clear" onclick="exportBackup()" style="margin-left:10px;">⬇️ Backup</span>
 </div>
 <div class="log" id="log">
   <div style="text-align:center;color:var(--muted);font-size:0.78rem;padding:16px;">Nessuna transazione ancora</div>
@@ -363,7 +364,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, serverTimestamp, query, where, orderBy, onSnapshot
+  getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ===== FIREBASE CONFIG (progetto: dashboard-finanziario) =====
@@ -646,6 +647,28 @@ function startTodayListener() {
 }
 
 document.getElementById('clear-label').addEventListener('click', () => showToast('Il log si aggiorna automaticamente dal cloud'));
+
+
+window.exportBackup = async function() {
+  try {
+    const snap = await getDocs(collection(db,'transactions'));
+    const data = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    const payload = { exportedAt: new Date().toISOString(), count: data.length, transactions: data };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'backup_transazioni_' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Backup scaricato');
+  } catch(e) {
+    console.error(e);
+    alert('Errore backup: ' + e.message);
+  }
+};
 
 renderCats(); renderAccounts();
 </script>
